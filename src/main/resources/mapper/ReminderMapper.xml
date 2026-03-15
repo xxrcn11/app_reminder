@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bt.sample.mapper.ReminderMapper">
+
+    <!-- 기본 CRUD -->
+
+    <select id="findByListId" parameterType="long" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE list_id = #{listId}
+        ORDER BY is_completed, sort_order, created_at
+    </select>
+
+    <select id="findById" parameterType="long" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="ReminderDto" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO reminders (list_id, title, memo, due_date, priority, is_flagged, is_completed, sort_order)
+        VALUES (#{listId}, #{title}, #{memo}, #{dueDate}, #{priority}, #{isFlagged}, #{isCompleted}, #{sortOrder})
+    </insert>
+
+    <update id="update" parameterType="ReminderDto">
+        UPDATE reminders
+        SET title = #{title},
+            memo = #{memo},
+            due_date = #{dueDate},
+            priority = #{priority},
+            is_flagged = #{isFlagged},
+            list_id = #{listId},
+            sort_order = #{sortOrder}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM reminders WHERE id = #{id}
+    </delete>
+
+    <update id="toggleComplete" parameterType="long">
+        UPDATE reminders
+        SET completed_at = IF(is_completed = 0, NOW(), NULL),
+            is_completed = IF(is_completed = 0, 1, 0)
+        WHERE id = #{id}
+    </update>
+
+    <!-- 스마트 리스트 -->
+
+    <select id="findToday" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE DATE(due_date) = CURDATE() AND is_completed = 0
+        ORDER BY sort_order, created_at
+    </select>
+
+    <select id="findScheduled" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE due_date IS NOT NULL AND is_completed = 0
+        ORDER BY due_date, sort_order
+    </select>
+
+    <select id="findAllIncomplete" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE is_completed = 0
+        ORDER BY list_id, sort_order, created_at
+    </select>
+
+    <select id="findFlagged" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE is_flagged = 1 AND is_completed = 0
+        ORDER BY sort_order, created_at
+    </select>
+
+    <select id="findCompleted" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE is_completed = 1
+        ORDER BY completed_at DESC
+    </select>
+
+    <!-- 검색 -->
+
+    <select id="search" parameterType="string" resultType="ReminderDto">
+        SELECT id, list_id, title, memo, due_date, priority,
+               is_flagged, is_completed, completed_at, sort_order, created_at, updated_at
+        FROM reminders
+        WHERE title LIKE CONCAT('%', #{keyword}, '%')
+           OR memo LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY is_completed, created_at DESC
+    </select>
+
+    <!-- 카운트 -->
+
+    <select id="getCounts" resultType="map">
+        SELECT
+            (SELECT COUNT(*) FROM reminders WHERE DATE(due_date) = CURDATE() AND is_completed = 0) AS today,
+            (SELECT COUNT(*) FROM reminders WHERE due_date IS NOT NULL AND is_completed = 0) AS scheduled,
+            (SELECT COUNT(*) FROM reminders WHERE is_completed = 0) AS total,
+            (SELECT COUNT(*) FROM reminders WHERE is_flagged = 1 AND is_completed = 0) AS flagged,
+            (SELECT COUNT(*) FROM reminders WHERE is_completed = 1) AS completed
+    </select>
+
+</mapper>
